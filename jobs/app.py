@@ -1,6 +1,6 @@
 import sqlite3
-from flask import Flask, render_template, g, request
 import datetime
+from flask import Flask, render_template, g, request, redirect, url_for
 
 PATH = 'db/jobs.sqlite'
 
@@ -30,7 +30,6 @@ def close_connection(exception):
     if connection is not None:
         connection.close()
 
-
 @app.route('/')
 @app.route('/jobs')
 def jobs():
@@ -44,7 +43,7 @@ def job(job_id):
 
 @app.route('/employer/<employer_id>')
 def employer(employer_id):
-    employer = execute_sql('SELECT * FROM employer WHERE id = ?', [employer_id], single=True)
+    employer = execute_sql('SELECT * FROM employer WHERE id=?', [employer_id], single=True)
     jobs = execute_sql('SELECT job.id, job.title, job.description, job.salary FROM job JOIN employer ON employer.id = job.employer_id WHERE employer.id = ?', [employer_id])
     reviews = execute_sql('SELECT review, rating, title, date, status FROM review JOIN employer ON employer.id = review.employer_id WHERE employer.id = ?', [employer_id])
     return render_template('employer.html', employer=employer, jobs=jobs, reviews=reviews)
@@ -57,8 +56,9 @@ def review(employer_id):
         title = request.form['title']
         status = request.form['status']
 
-        date = datetime.datetime.now().strftime('%m/%d/%Y')
-        execute_sql('INSERT INTO review (review, rating, title, date, status,  employer_id) VALUES (?, ?, ?, ?, ?, ?)', [review, rating, title, status, date, employer_id], commit=True)
+        date = datetime.datetime.now().strftime("%m/%d/%Y")
+        execute_sql('INSERT INTO review (review, rating, title, date, status, employer_id) VALUES (?, ?, ?, ?, ?, ?)', (review, rating, title, date, status, employer_id), commit=True)
 
-        return render_template('review.html', message='Review Successfully Posted')  
+        return redirect(url_for('employer', employer_id=employer_id))
+
     return render_template('review.html', employer_id=employer_id)
